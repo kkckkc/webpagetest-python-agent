@@ -51,18 +51,13 @@ class ChromeWebDriver(WebDriver):
         sleep(LOG_COMPLETION_WAIT)
 
         trace_capability = TraceCapability(self.session)
-        f = trace_capability.open_trace_file(self.run, self.view, self.step)
-        try:
+        with trace_capability.open_trace_file(self.run, self.view, self.step) as f:
             f.write("[\n")
-
             f.write(",\n".join(
                 [json.dumps(json.loads(entry['message'])['message']['params']) for entry in
                  self.driver.get_log('performance')]
             ))
-
             f.write("\n]")
-        finally:
-            f.close()
 
     def _focus_window(self):
         window_handle = self.driver.current_window_handle

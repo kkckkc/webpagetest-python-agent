@@ -51,11 +51,8 @@ class Agent:
         log.debug("Using %s as result directory", dir)
         try:
             result_dir = ResultDirectory(dir)
-            job_file = result_dir.open_file("test.job")
-            try:
+            with result_dir.open_file("test.job") as job_file:
                 job_file.write(job_description)
-            finally:
-                job_file.close()
 
             self.job(test_id, result_dir)
 

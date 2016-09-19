@@ -58,7 +58,6 @@ class ResultDirectory:
             shutil.rmtree(self.folder)
         os.mkdir(self.folder)
 
-    # TODO: Change to contextmanager
     def open_file(self, name, run=None, view=None, step=None):
         return open(self.get_file(name, run, view, step), "w")
 
@@ -71,9 +70,6 @@ class ResultDirectory:
         if record not in self.files:
             self.files.append(record)
         return os.path.join(self.folder, f)
-
-    def open_associated_file(self, name, file_record):
-        self.open_file(name, file_record.run, file_record.view, file_record.step)
 
     def get_associated_file(self, name, file_record):
         return self.get_file(name, file_record.run, file_record.view, file_record.step)
