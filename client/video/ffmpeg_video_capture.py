@@ -1,8 +1,9 @@
 import logging
-import subprocess
+from time import sleep
 
 import client.provider
 from client.capability import VideoCapability
+from client.process import launch
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +39,15 @@ class FfmpegVideoCapture(client.provider.Provider):
             "-r", "25",
             video_capability.get_video_file(self.run, self.view, self.step)]
 
-        logger.debug("Running cmd '%s'" % " ".join(ffmpeg_cmd))
+        self.video_process, stdout_reader, stderr_reader = launch(ffmpeg_cmd)
 
-        self.video_process = subprocess.Popen(ffmpeg_cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-
-        while self.video_process.poll() is None:
-            output = self.video_process.stdout.readline()
-            if 'Press [q] to stop, [?] for help' in output:
-                break
+        # Wait for confirmation that recording has started
+        interval = 0.01
+        timeout = 2
+        counter = timeout / interval
+        while counter > 0 and not stdout_reader.contains('Press [q] to stop, [?] for help'):
+            sleep(interval)
+            counter -= 1
 
     def on_end_step(self, event):
         logger.info("Ending screen recording")

@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 import os
-import subprocess
 import sys
 from string import join
 from time import sleep
@@ -11,6 +10,7 @@ from selenium import webdriver
 
 from client.browser.webdriver.webdriver import WebDriver
 from client.capability import TraceCapability
+from client.process import run
 from client.provider import Provider
 
 LOG_COMPLETION_WAIT = 0.5
@@ -75,12 +75,12 @@ class ChromeTraceParser(Provider):
         for f in trace_files:
             logger.info("Parsing chrome trace files %d of %d" % (i, len(trace_files)))
 
-            subprocess.check_output([
+            run([
                 sys.executable,
                 "lib/trace/trace-parser.py",
                 "-t", os.path.join(self.session.result_dir.folder, f.file),
                 "-u", os.path.join(self.session.result_dir.folder, trace_capability.get_user_timing_file(f)),
                 "-c", os.path.join(self.session.result_dir.folder, trace_capability.get_timeline_cpu_file(f)),
                 "-f", os.path.join(self.session.result_dir.folder, trace_capability.get_feature_usage_file(f))
-            ], stderr=subprocess.STDOUT, env=os.environ.copy())
+            ])
             i += 1
