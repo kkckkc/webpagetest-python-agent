@@ -47,14 +47,14 @@ class Agent:
         test_id = config.get("Job", "Test ID")
         log.info("Initiating job %s" % test_id)
 
-        dir = tempfile.mkdtemp(prefix='tmp_wpt_')
-        log.debug("Using %s as result directory", dir)
+        temp_directory = tempfile.mkdtemp(prefix='tmp_wpt_')
+        log.debug("Using %s as result directory", temp_directory)
         try:
-            result_dir = ResultDirectory(dir)
+            result_dir = ResultDirectory(temp_directory)
             with result_dir.open_file("test.job") as job_file:
                 job_file.write(job_description)
 
             self.job(test_id, result_dir)
 
         finally:
-            shutil.rmtree(dir)
+            shutil.rmtree(temp_directory)

@@ -6,19 +6,19 @@ import event
 
 
 class Provider:
-    def __init__(self, event_bus):
-        self.config = {}
+    def __init__(self, event_bus, config):
         self.event_bus = event_bus
         self.event_bus.add(self)
-
-    def init(self, config):
         self.config = config
-
         if "log_level" in config:
             if config['log_level'] == 1:
                 self._init_logging(logging.INFO)
             elif config['log_level'] == 2:
                 self._init_logging(logging.DEBUG)
+        self.session = None
+        self.run = None
+        self.view = None
+        self.step = None
 
     @classmethod
     def argparser(cls):

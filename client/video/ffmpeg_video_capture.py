@@ -1,17 +1,18 @@
 import logging
 from time import sleep
 
-import client.provider
+from client.provider import Provider
 from client.capability import VideoCapability
 from client.process import launch
 
 logger = logging.getLogger(__name__)
 
 
-class FfmpegVideoCapture(client.provider.Provider):
-    def init(self, config):
-        client.provider.Provider.init(self, config)
+class FfmpegVideoCapture(Provider):
+    def __init__(self, event_bus, config):
+        Provider.__init__(self, event_bus, config)
         self.pixel_density = config['pixelDensity'] if "pixelDensity" in config else None
+        self.video_process = None
 
     def on_setup_step(self, event):
         video_capability = VideoCapability(self.session)

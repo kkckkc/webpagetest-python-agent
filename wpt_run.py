@@ -90,11 +90,10 @@ else:
         except ValueError:
             raise Exception("Cannot find provider %s" % k)
 
-        provider = matching_provider_class(event_dispatcher)
         config = matching_provider_class.argparser().parse_args(v).__dict__
 
         logger.debug("Initializing provider %s with %r" % (k, config))
-        provider.init(config)
+        provider = matching_provider_class(event_dispatcher, config)
 
     event.run(event_dispatcher, model.Session(run_count=options.runs,
                                               result_dir=model.ResultDirectory(options.dir),

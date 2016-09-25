@@ -1,5 +1,6 @@
 import logging
 
+
 def init_log(level, *loggers):
     if level is None:
         level = logging.WARN

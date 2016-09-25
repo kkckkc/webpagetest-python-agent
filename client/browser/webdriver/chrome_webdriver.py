@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 class ChromeWebDriver(WebDriver):
-    def init(self, config):
+    def __init__(self, event_bus, config):
+        WebDriver.__init__(self, event_bus, config)
         logger.info("Creating ChromeWebDriver")
-        WebDriver.init(self, config)
 
     @classmethod
     def argparser(cls):

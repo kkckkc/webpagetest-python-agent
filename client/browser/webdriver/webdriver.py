@@ -103,9 +103,9 @@ def show_orange_overlay(driver):
 
 
 class WebDriver(client.provider.Provider):
-    def __init__(self, event_bus):
+    def __init__(self, event_bus, config):
+        client.provider.Provider.__init__(self, event_bus, config)
         self.driver = None
-        client.provider.Provider.__init__(self, event_bus)
 
     def _init_driver(self):
         pass
@@ -161,9 +161,9 @@ class WebDriver(client.provider.Provider):
 
 
 class FirefoxWebDriver(WebDriver):
-    def init(self, config):
+    def __init__(self, event_bus, config):
+        WebDriver.__init__(self, event_bus, config)
         logger.info("Creating FirefoxWebDriver")
-        WebDriver.init(self, config)
 
     def _init_driver(self):
         binary = FirefoxBinary(self.config['firefox_binary'])
