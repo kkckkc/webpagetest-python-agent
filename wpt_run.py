@@ -13,6 +13,7 @@ from collections import OrderedDict
 from client import event
 from client import model
 from client.browser.webdriver.chrome_webdriver import ChromeWebDriver, ChromeTraceParser
+from client.browser.webdriver.remote_debug_webdriver import RemoteDebugWebDriver
 from client.browser.webdriver.webdriver import FirefoxWebDriver
 from client.event import EventDispatcher
 from client.log import init_log
@@ -22,7 +23,8 @@ from client.logging_provider import LoggingProvider
 
 logger = logging.getLogger("wpt_run")
 
-providers = [ChromeWebDriver, FirefoxWebDriver, ChromeTraceParser, FfmpegVideoCapture, VisualMetrics, LoggingProvider]
+providers = [ChromeWebDriver, FirefoxWebDriver, ChromeTraceParser, FfmpegVideoCapture, VisualMetrics, LoggingProvider,
+             RemoteDebugWebDriver]
 
 parser = argparse.ArgumentParser(description='WPT Run', prog='wpt_run.py', add_help=False)
 parser.add_argument('-h', '--help', action='store_true')
