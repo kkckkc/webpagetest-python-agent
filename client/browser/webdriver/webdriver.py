@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from time import sleep, time
 
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
 import client.event
@@ -35,13 +36,17 @@ def wait_for_page_load(browser):
 
     start_time = time()
     while time() < start_time + WEBDRIVER_WAIT_TIMEOUT:
-        new_page = browser.find_element_by_tag_name('html')
-        state = browser.execute_script("return document.readyState;")
+        try:
+            new_page = browser.find_element_by_tag_name('html')
+            state = browser.execute_script("return document.readyState;")
 
-        if new_page.id != old_page.id and "complete" == state:
-            return
-        else:
-            sleep(WEBDRIVER_WAIT_POLL_INTERVAL)
+            if new_page.id != old_page.id and "complete" == state:
+                return
+        except NoSuchElementException:
+            # Might not find html element in case page is loading
+            pass
+
+        sleep(WEBDRIVER_WAIT_POLL_INTERVAL)
 
     raise Exception('Timeout waiting for readyState')
 
@@ -79,7 +84,7 @@ class ClickAndWaitCommand(object):
         logger.info("Executing command 'clickAndWait %s'" % self.text)
 
         with wait_for_page_load(driver):
-            driver.find_element_by_link_text(self.text).click()
+            driver.find_element_by_link_text(self.text)[0].click()
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 

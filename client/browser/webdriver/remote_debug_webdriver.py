@@ -10,6 +10,7 @@ import sys
 import urllib2
 
 import websocket
+from selenium.common.exceptions import NoSuchElementException
 
 from client.browser.webdriver.webdriver import WebDriver
 from selenium.webdriver import Remote
@@ -25,11 +26,24 @@ class Response:
         self.msg = msg
 
 
+class Error:
+    def __init__(self, msg):
+        self.error = msg[u'error']
+        self.id = msg[u'id']
+        self.msg = msg
+
+
 class Event:
     def __init__(self, msg):
         self.params = msg[u'params'] if u'params' in msg else {}
         self.method = msg[u'method']
         self.msg = msg
+
+
+class RemoteDebugError(Exception):
+    def __init__(self, msg, code):
+        super(RemoteDebugError, self).__init__(msg)
+        self.code = code
 
 
 class RemoteDebugConnectionThread(websocket.threading.Thread):
@@ -49,13 +63,12 @@ class RemoteDebugConnectionThread(websocket.threading.Thread):
                 decoded_message = json.loads(message)
                 if u'result' in decoded_message:
                     self.inbox.put(Response(decoded_message))
+                elif u'error' in decoded_message:
+                    self.inbox.put(Error(decoded_message))
                 else:
                     self.inbox.put(Event(decoded_message))
             except:
-                print message
-                print "Unexpected error:", sys.exc_info()[0]
-                print "Unexpected error:", sys.exc_info()[1]
-                print "Unexpected error:", sys.exc_info()[2]
+                print "Unexpected error:", sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2], message
                 raise
 
         def on_error(ws, error):
@@ -95,8 +108,10 @@ class RemoteDebugConnectionThread(websocket.threading.Thread):
     def wait_for_response(self, id):
         while True:
             item = self.inbox.get(block=True, timeout=5)
-            if isinstance(item, Response) and item.id == id:
+            if (isinstance(item, Response) or isinstance(item, Error)) and item.id == id:
                 self.logger.debug("<< %r" % item.msg)
+                if isinstance(item, Error):
+                    raise RemoteDebugError(item.error[u'message'], item.error[u'code'])
                 return item
 
     def wait_for_frame_event(self, method, frameId):
@@ -118,8 +133,6 @@ class RemoteDebugRemoteConnection(object):
 
         self.connection = RemoteDebugConnectionThread(self.ws_url)
         self.connection.start()
-
-#        self.connection.send("Page.enable", {})
 
     def execute(self, command, params):
         if command[:3] == 'w3c':
@@ -165,40 +178,50 @@ class RemoteDebugRemoteConnection(object):
         return ret
 
     def find_element(self, session_id, value, using):
+        def _element(n):
+            return {"ELEMENT": n}
+
         root = self.connection.send("DOM.getDocument").result[u'root'][u'nodeId']
 
         if using == 'link text':
             ret = self.connection.send("DOM.performSearch",
-                                       {"nodeId": root,
-                                        "query": "//a[text() = '%s']" % value})
+                                       {"nodeId": root, "query": "//a[text()='%s']" % value})
 
             search_id = ret.result[u'searchId']
-
-            # TODO: What if zero matches, more than one etc?
             count = ret.result[u'resultCount']
 
             ret = self.connection.send("DOM.getSearchResults",
-                                       {"searchId": search_id,
-                                        "fromIndex": 0,
-                                        "toIndex": 1})
+                                       {"searchId": search_id, "fromIndex": 0, "toIndex": count})
 
             self.connection.send("DOM.discardSearchResults", {"searchId": search_id})
 
-            return {"status": 0, "value": {"ELEMENT": ret.result[u'nodeIds'][0]}}
+            if count > 1:
+                return {"status": 0, "value": [_element(id) for id in ret.result[u'nodeIds']]}
+            elif count == 1:
+                return {"status": 0, "value": _element(ret.result[u'nodeIds'][0])}
+            else:
+                raise NoSuchElementException()
         else:
-            ret = self.connection.send("DOM.querySelector",
-                                       {"nodeId": root,
-                                        "selector": value})
-            return {"status": 0, "value": {"ELEMENT": ret.result[u'nodeId']}}
+            try:
+                ret = self.connection.send("DOM.querySelector",
+                                           {"nodeId": root, "selector": value})
+                return {"status": 0, "value": _element(ret.result[u'nodeId'])}
+            except RemoteDebugError as e:
+                if e.code == -32000:
+                    raise NoSuchElementException(e.message)
+                else:
+                    raise
 
     def click_element(self, session_id, id):
         object_id = self.connection.send("DOM.resolveNode", {"nodeId": id}).result[u'object'][u'objectId']
         self.connection.send("Runtime.callFunctionOn", {"objectId": object_id,
                                                         "functionDeclaration": "function() { this.click() }"})
 
-        # TODO: Need to check result
-
-        # self.connection.send("Runtime.releaseObject", {"objectId": object_id })
+        try:
+            self.connection.send("Runtime.releaseObject", {"objectId": object_id })
+        except RemoteDebugError:
+            # No worry if release object fails, as this navigates to new page and automatically releases object
+            pass
 
     def get(self, session_id, url):
         self.connection.send("Page.navigate", {"url": url})
