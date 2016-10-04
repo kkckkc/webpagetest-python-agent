@@ -10,6 +10,12 @@ class VideoCapability:
     def __init__(self, session):
         self.session = session
 
+    def get_tmp_video_file(self, run, view):
+        return self.session.result_dir.get_file("tmp_video.mp4", run, view, None)
+
+    def get_tmp_video_files(self):
+        return self.session.result_dir.get_files("tmp_video.mp4")
+
     def get_video_file(self, run, view, step):
         return self.session.result_dir.get_file("video.mp4", run, view, step)
 

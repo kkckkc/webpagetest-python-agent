@@ -9,6 +9,11 @@ class Session:
         self.script = script
         self.url = url
         self.result_dir = result_dir
+        self.runs = []
+
+    def add_run(self, run):
+        if run not in self.runs:
+            self.runs.append(run)
 
     def __repr__(self):
         return "Session(run_count=%d, url=%s, script=%s)" % (self.run_count, self.url, self.script)
@@ -17,15 +22,25 @@ class Session:
 class Run:
     def __init__(self, current):
         self.current = current
+        self.views = []
+
+    def add_view(self, view):
+        if view not in self.views:
+            self.views.append(view)
 
     def __repr__(self):
-        return "Run(current=%d)" % (self.current)
+        return "Run(current=%d)" % self.current
 
 
 class View:
     def __init__(self, is_first, is_repeat):
         self.is_repeat = is_repeat
         self.is_first = is_first
+        self.steps = []
+
+    def add_step(self, step):
+        if step not in self.steps:
+            self.steps.append(step)
 
     def __repr__(self):
         return "View(is_first=%r, is_repeat=%r)" % (self.is_first, self.is_repeat)

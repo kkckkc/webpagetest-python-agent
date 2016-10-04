@@ -245,3 +245,9 @@ class RemoteDebugWebDriver(WebDriver):
 
         self.driver = Remote(command_executor=RemoteDebugRemoteConnection(response[0][u'webSocketDebuggerUrl']),
                              desired_capabilities={})
+
+
+class IOSRemoteDebugWebDriver(RemoteDebugWebDriver):
+    def _hide_orange_overlay(self):
+        self.driver.execute_script(
+            "document.getElementById('webpagetest_orange_overlay').style.backgroundColor = 'rgb(255, 255, 255)';")

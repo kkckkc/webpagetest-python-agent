@@ -13,7 +13,7 @@ class Provider:
         if "log_level" in config:
             if config['log_level'] == 1:
                 self._init_logging(logging.INFO)
-            elif config['log_level'] == 2:
+            elif config['log_level'] >= 2:
                 self._init_logging(logging.DEBUG)
         self.session = None
         self.run = None
@@ -35,10 +35,13 @@ class Provider:
             self.session = e.session
         elif type(e) == event.SetupRunEvent:
             self.run = e.run
+            self.session.add_run(e.run)
         elif type(e) == event.SetupViewEvent:
             self.view = e.view
+            self.run.add_view(e.view)
         elif type(e) == event.SetupStepEvent:
             self.step = e.step
+            self.view.add_step(e.step)
 
         method_name = "on" + re.sub(r'([A-Z])', r'_\1', type(e).__name__, flags=re.DOTALL).lower()[:-6]
         method = None

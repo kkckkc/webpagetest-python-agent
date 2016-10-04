@@ -88,24 +88,6 @@ class ClickAndWaitCommand(object):
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 
-def show_orange_overlay(driver):
-    overlay_script = ("""
-        var ol = document.createElement('div');
-        ol.id='webpagetest_orange_overlay';
-        ol.style.position='absolute';
-        ol.style.top='0';
-        ol.style.left='0';
-        ol.style.width='100%';
-        ol.style.height='100%';
-        ol.style.backgroundColor='rgb({}, {}, {})';
-        ol.style.zIndex='10';
-        ol.style.cursor='none';
-        ol.style.pointerEvents='none';
-        document.body.appendChild(ol);
-    """)
-    driver.execute_script(overlay_script.format(*ORANGE_OVERLAY_COLOR))
-    sleep(ORANGE_OVERLAY_WAIT)
-
 
 class WebDriver(client.provider.Provider):
     def __init__(self, event_bus, config):
@@ -147,10 +129,12 @@ class WebDriver(client.provider.Provider):
             logger.debug("evaluate_script - parsing command '%s'" % line)
             command = parse_command(line, step)
             if command.is_step:
-                show_orange_overlay(self.driver)
+                self._show_orange_overlay()
 
                 self.event_bus.emit(client.event.SetupStepEvent(step))
                 self.event_bus.emit(client.event.StartStepEvent(step))
+
+                self._hide_orange_overlay()
 
                 command.execute(self.driver)
 
@@ -162,6 +146,38 @@ class WebDriver(client.provider.Provider):
                 command.execute(self.driver)
 
     def _focus_window(self):
+        pass
+
+    def _show_orange_overlay(self):
+        overlay_script = ("""
+            var ol = document.createElement('div');
+            ol.id='webpagetest_orange_overlay';
+            ol.style.position='absolute';
+            ol.style.top='0';
+            ol.style.left='0';
+            ol.style.width='100%';
+            ol.style.height='100%';
+            ol.style.backgroundColor='rgb({}, {}, {})';
+            ol.style.zIndex='2147483647';
+            ol.style.cursor='none';
+            ol.style.pointerEvents='none';
+            document.body.appendChild(ol);
+
+            window.addEventListener('unload', function(event) {{
+                document.getElementById('webpagetest_orange_overlay').style.backgroundColor = 'rgb(255, 255, 255)';
+            }});
+            window.addEventListener('beforeunload', function(event) {{
+                document.getElementById('webpagetest_orange_overlay').style.backgroundColor = 'rgb(255, 255, 255)';
+            }});
+            window.addEventListener('pagehide', function(event) {{
+                document.getElementById('webpagetest_orange_overlay').style.backgroundColor = 'rgb(255, 255, 255)';
+            }});
+        """)
+
+        self.driver.execute_script(overlay_script.format(*ORANGE_OVERLAY_COLOR))
+        sleep(ORANGE_OVERLAY_WAIT)
+
+    def _hide_orange_overlay(self):
         pass
 
 
