@@ -1,10 +1,10 @@
-import argparse
 import logging
 from time import sleep
 
 from client.provider import Provider
 from client.capability import VideoCapability
 from client.process import launch
+from argparse import ArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +18,10 @@ class XRecordVideoCapture(Provider):
 
     @classmethod
     def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        parser.add_argument('--xrecord', dest='xrecord', default="xrecord", required=False)
-        parser.add_argument('--name', dest='device_name', required=True)
-        return parser
+        p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False, parents=[Provider.argparser()])
+        p.add_argument('--xrecord', dest='xrecord', default="xrecord", required=False)
+        p.add_argument('--name', dest='device_name', required=True)
+        return p
 
     def on_setup_run(self, event):
         video_capability = VideoCapability(self.session)

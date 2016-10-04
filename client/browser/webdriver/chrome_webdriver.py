@@ -1,4 +1,3 @@
-import argparse
 import json
 import logging
 import os
@@ -12,6 +11,7 @@ from client.browser.webdriver.webdriver import WebDriver
 from client.capability import TraceCapability
 from client.process import run
 from client.provider import Provider
+from argparse import ArgumentParser, SUPPRESS
 
 LOG_COMPLETION_WAIT = 0.5
 
@@ -30,12 +30,10 @@ class ChromeWebDriver(WebDriver):
 
     @classmethod
     def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        parser.add_argument('--chrome-driver-path', dest='chromedriver_path', required=True)
-        parser.add_argument('--emulate', dest='mobile_emulation', default=argparse.SUPPRESS)
-        return parser
+        p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False, parents=[WebDriver.argparser()])
+        p.add_argument('--chrome-driver-path', dest='chromedriver_path', required=True)
+        p.add_argument('--emulate', dest='mobile_emulation', default=SUPPRESS)
+        return p
 
     def _init_driver(self):
         caps = webdriver.DesiredCapabilities.CHROME

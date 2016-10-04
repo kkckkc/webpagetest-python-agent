@@ -1,4 +1,4 @@
-import argparse
+from argparse import ArgumentParser
 import logging
 import re
 
@@ -22,10 +22,10 @@ class Provider:
 
     @classmethod
     def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        return parser
+        p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
+        p.add_argument('-v', '--verbose', dest='log_level', action='count',
+                       help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
+        return p
 
     def _init_logging(self, level):
         logging.getLogger(self.__class__.__module__).setLevel(level)

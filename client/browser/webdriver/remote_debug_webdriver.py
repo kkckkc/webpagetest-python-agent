@@ -1,5 +1,4 @@
 import Queue
-import argparse
 import json
 import logging
 import re
@@ -14,6 +13,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from client.browser.webdriver.webdriver import WebDriver
 from selenium.webdriver import Remote
+from argparse import ArgumentParser
 
 
 logger = logging.getLogger(__name__)
@@ -233,11 +233,9 @@ class RemoteDebugRemoteConnection(object):
 class RemoteDebugWebDriver(WebDriver):
     @classmethod
     def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        parser.add_argument('--port', dest='port', required=True)
-        return parser
+        p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False, parents=[WebDriver.argparser()])
+        p.add_argument('--port', dest='port', required=True)
+        return p
 
     def _init_driver(self):
         # Make request to http://localhost:<port>/json

@@ -1,10 +1,10 @@
-import argparse
 import logging
 import urllib2
 from time import sleep
 
 from client.provider import Provider
 from client.process import launch
+from argparse import ArgumentParser
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +18,9 @@ class IOSWebkitDebugProxy(Provider):
 
     @classmethod
     def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        parser.add_argument('--proxy', dest='proxy', default="ios_webkit_debug_proxy", required=False)
-
-        return parser
+        p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False, parents=[Provider.argparser()])
+        p.add_argument('--proxy', dest='proxy', default="ios_webkit_debug_proxy", required=False)
+        return p
 
     def on_setup_run(self, event):
         logger.info("Starting ios proxy")

@@ -1,28 +1,19 @@
-import argparse
 import logging
 import os
 import re
 import shutil
 import sys
 
-import client.provider
+from client.provider import Provider
 from client.capability import VideoCapability
 from client import process
 
 logger = logging.getLogger(__name__)
 
 
-class VisualMetrics(client.provider.Provider):
+class VisualMetrics(Provider):
     def __init__(self, event_bus, config):
-        client.provider.Provider.__init__(self, event_bus, config)
-
-    @classmethod
-    def argparser(cls):
-        parser = argparse.ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False)
-        parser.add_argument('-v', '--verbose', dest='log_level', action='count',
-                            help="Increase verbosity (specify multiple times for more). -vv for full debug output.")
-        return parser
-
+        Provider.__init__(self, event_bus, config)
 
     def on_tear_down_session(self, event):
         video_capability = VideoCapability(self.session)
