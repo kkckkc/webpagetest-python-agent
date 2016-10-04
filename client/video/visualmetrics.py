@@ -18,10 +18,14 @@ class VisualMetrics(Provider):
     def on_tear_down_session(self, event):
         video_capability = VideoCapability(self.session)
 
-        if len(video_capability.get_tmp_video_files()) > 0:
-            self.split_tmp_videos(video_capability)
+        self.lock()
+        try:
+            if len(video_capability.get_tmp_video_files()) > 0:
+                self.split_tmp_videos(video_capability)
 
-        self.process_videos(video_capability)
+            self.process_videos(video_capability)
+        finally:
+            self.unlock()
 
     def process_videos(self, video_capability):
         i = 1

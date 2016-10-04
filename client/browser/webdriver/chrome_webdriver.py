@@ -65,6 +65,9 @@ class ChromeWebDriver(WebDriver):
 
 
 class ChromeTraceParser(Provider):
+    def __init__(self, event_bus, config):
+        Provider.__init__(self, event_bus, config, lock_on="run")
+
     def on_tear_down_run(self, event):
         trace_capability = TraceCapability(self.session)
 

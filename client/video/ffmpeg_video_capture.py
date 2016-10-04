@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FfmpegVideoCapture(Provider):
     def __init__(self, event_bus, config):
-        Provider.__init__(self, event_bus, config)
+        Provider.__init__(self, event_bus, config, lock_on="step")
         self.pixel_density = config['pixelDensity'] if "pixelDensity" in config else None
         self.video_process = None
 

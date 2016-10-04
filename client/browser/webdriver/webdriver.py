@@ -88,10 +88,9 @@ class ClickAndWaitCommand(object):
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 
-
 class WebDriver(client.provider.Provider):
     def __init__(self, event_bus, config):
-        client.provider.Provider.__init__(self, event_bus, config)
+        client.provider.Provider.__init__(self, event_bus, config, lock_on="run")
         self.driver = None
 
     def _init_driver(self):

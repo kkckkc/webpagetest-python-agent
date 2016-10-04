@@ -13,7 +13,7 @@ NUMBER_OF_STARTS_ATTEMPTS = 5
 
 class IOSWebkitDebugProxy(Provider):
     def __init__(self, event_bus, config):
-        Provider.__init__(self, event_bus, config)
+        Provider.__init__(self, event_bus, config, lock_on="run")
         self.video_process = None
 
     @classmethod

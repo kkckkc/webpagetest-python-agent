@@ -7,6 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class LoggingProvider(Provider):
+    def __init__(self, event_bus, config):
+        Provider.__init__(self, event_bus, config, lock_on="session")
+
     def on_event(self, e):
         if type(e) == event.StartSessionEvent:
             logger.info("Start session %s" % e.session.result_dir.folder)
