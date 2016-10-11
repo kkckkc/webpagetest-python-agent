@@ -46,6 +46,10 @@ class RemoteDebugError(Exception):
         self.code = code
 
 
+def _to_snake_case(k):
+    return re.sub("([A-Z])", "_\\1", k).lower()
+
+
 class RemoteDebugConnectionThread(websocket.threading.Thread):
     QUIT = {"method": "quit"}
 
@@ -138,8 +142,8 @@ class RemoteDebugRemoteConnection(object):
         if command[:3] == 'w3c':
             command = command[3].lower() + command[4:]
 
-        command = self._to_snake_case(command)
-        params = {self._to_snake_case(k):v for k,v in params.iteritems()}
+        command = _to_snake_case(command)
+        params = {_to_snake_case(k): v for k, v in params.iteritems()}
 
         self.logger.debug("Call %s ( %r )" % (command, params))
 
@@ -178,34 +182,16 @@ class RemoteDebugRemoteConnection(object):
         return ret
 
     def find_element(self, session_id, value, using):
-        def _element(n):
-            return {"ELEMENT": n}
-
         root = self.connection.send("DOM.getDocument").result[u'root'][u'nodeId']
 
         if using == 'link text':
-            ret = self.connection.send("DOM.performSearch",
-                                       {"nodeId": root, "query": "//a[text()='%s']" % value})
-
-            search_id = ret.result[u'searchId']
-            count = ret.result[u'resultCount']
-
-            ret = self.connection.send("DOM.getSearchResults",
-                                       {"searchId": search_id, "fromIndex": 0, "toIndex": count})
-
-            self.connection.send("DOM.discardSearchResults", {"searchId": search_id})
-
-            if count > 1:
-                return {"status": 0, "value": [_element(id) for id in ret.result[u'nodeIds']]}
-            elif count == 1:
-                return {"status": 0, "value": _element(ret.result[u'nodeIds'][0])}
-            else:
-                raise NoSuchElementException()
+            return self._find_by_xpath(root, "//a[text()='%s']" % value)
+        elif using == 'xpath':
+            return self._find_by_xpath(root, value)
         else:
             try:
-                ret = self.connection.send("DOM.querySelector",
-                                           {"nodeId": root, "selector": value})
-                return {"status": 0, "value": _element(ret.result[u'nodeId'])}
+                ret = self.connection.send("DOM.querySelector", {"nodeId": root, "selector": value})
+                return {"status": 0, "value": {"ELEMENT": ret.result[u'nodeId']}}
             except RemoteDebugError as e:
                 if e.code == -32000:
                     raise NoSuchElementException(e.message)
@@ -226,8 +212,20 @@ class RemoteDebugRemoteConnection(object):
     def get(self, session_id, url):
         self.connection.send("Page.navigate", {"url": url})
 
-    def _to_snake_case(self, k):
-        return re.sub("([A-Z])", "_\\1", k).lower()
+    def _find_by_xpath(self, root, xpath):
+        ret = self.connection.send("DOM.performSearch", {"nodeId": root, "query": xpath})
+
+        search_id = ret.result[u'searchId']
+        count = ret.result[u'resultCount']
+
+        ret = self.connection.send("DOM.getSearchResults",
+                                   {"searchId": search_id, "fromIndex": 0, "toIndex": count})
+
+        self.connection.send("DOM.discardSearchResults", {"searchId": search_id})
+
+        if count == 0:
+            raise NoSuchElementException()
+        return {"status": 0, "value": {"ELEMENT": ret.result[u'nodeIds'][0]}}
 
 
 class RemoteDebugWebDriver(WebDriver):

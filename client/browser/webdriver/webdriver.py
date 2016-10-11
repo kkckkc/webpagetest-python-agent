@@ -74,6 +74,15 @@ class NavigateCommand(object):
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 
+def _selector_to_xpath_lvalue(attribute):
+    if attribute == 'innerText':
+        return "text()"
+    elif attribute == 'className':
+        return "@class"
+    else:
+        return "@" + attribute
+
+
 class ClickAndWaitCommand(object):
     is_step = True
 
@@ -83,8 +92,12 @@ class ClickAndWaitCommand(object):
     def execute(self, driver):
         logger.info("Executing command 'clickAndWait %s'" % self.text)
 
+        attribute, value = self.text.split("=", 1)
+
         with wait_for_page_load(driver):
-            driver.find_element_by_link_text(self.text)[0].click()
+            xpath = '//*[%s="%s"]' % (_selector_to_xpath_lvalue(attribute), value)
+            logger.debug("Find element by xpath %s" % xpath)
+            driver.find_element_by_xpath(xpath).click()
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 
