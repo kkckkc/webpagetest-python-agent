@@ -227,20 +227,103 @@ class RemoteDebugRemoteConnection(object):
             raise NoSuchElementException()
         return {"status": 0, "value": {"ELEMENT": ret.result[u'nodeIds'][0]}}
 
+    def delete_cookies(self, cookies):
+        for cookie in cookies:
+            url = cookie['domain']
+            if url.startswith("."):
+                url = "www" + url
+            url = ("https://" if cookie['secure'] else "http://") + url + cookie['path']
+            self.connection.send("Page.deleteCookie", {"cookieName": cookie['name'], "url": url})
+
+    def delete_all_cookies(self, session_id):
+        self.connection.send("Network.clearBrowserCookies")
+
+    def clear_cache(self, session_id):
+        self.connection.send("Network.clearBrowserCache")
+
+    def get_cookies(self, session_id):
+        return {"status": 0,
+                "value": [{"name": c['name'],
+                           "value": c['value'],
+                           "path": c.get('path', None),
+                           "domain": c.get('domain', None),
+                           "secure": c.get('secure', None),
+                           "httpOnly": c.get('httpOnly', None),
+                           "expiry": c.get('expires', None)}
+                          for c in self.connection.send("Page.getCookies").result['cookies']]
+                }
+
+    def disable_cache(self):
+        self.connection.send("Network.setCacheDisabled", {"cacheDisabled": True})
+
+    def enable_cache(self):
+        self.connection.send("Network.setCacheDisabled", {"cacheDisabled": False})
+
+    def can_clear_cookies(self):
+        try:
+            return self.connection.send("Network.canClearCookies").result
+        except RemoteDebugError:
+            return False
+
+    def can_clear_cache(self):
+        try:
+            return self.connection.send("Network.canClearCache").result
+        except RemoteDebugError:
+            return False
+
 
 class RemoteDebugWebDriver(WebDriver):
+    def __init__(self, event_bus, config, lock_on="run"):
+        super(WebDriver, self).__init__(event_bus, config, lock_on)
+        self.cookies = []
+
     @classmethod
     def argparser(cls):
         p = ArgumentParser(description=cls.__name__, prog=cls.__name__, add_help=False, parents=[WebDriver.argparser()])
         p.add_argument('--port', dest='port', required=True)
+        p.add_argument('--clear-cookies', dest='clear_cookies', default='auto',
+                       choices=['none', 'auto', 'all', 'post-run'])
+        p.add_argument('--clear-cache', dest='clear_cache', default='auto',
+                       choices=['none', 'auto', 'all', 'disable-cache'])
         return p
 
     def _init_driver(self):
         # Make request to http://localhost:<port>/json
         response = json.loads(urllib2.urlopen("http://localhost:%s/json" % self.config['port']).read())
 
-        self.driver = Remote(command_executor=RemoteDebugRemoteConnection(response[0][u'webSocketDebuggerUrl']),
-                             desired_capabilities={})
+        self.connection = RemoteDebugRemoteConnection(response[0][u'webSocketDebuggerUrl'])
+        self.driver = Remote(command_executor=self.connection, desired_capabilities={})
+
+    def on_setup_run(self, event):
+        super(RemoteDebugWebDriver, self).on_setup_run(event)
+
+        if self.config['clear_cookies'] == 'auto':
+            self.config['clear_cookies'] = 'all' if self.connection.can_clear_cookies() else 'post-run'
+
+        if self.config['clear_cache'] == 'auto':
+            self.config['clear_cache'] = 'all' if self.connection.can_clear_cache() else 'disable-cache'
+
+        if self.config['clear_cookies'] == 'all':
+            self.driver.delete_all_cookies()
+        if self.config['clear_cache'] == 'all':
+            self.connection.clear_cache()
+
+    def on_setup_view(self, event):
+        super(RemoteDebugWebDriver, self).on_setup_view(event)
+        if self.config['clear_cache'] == 'disable-cache':
+            if event.view.is_first:
+                self.connection.disable_cache()
+            else:
+                self.connection.enable_cache()
+
+    # TODO: This should really be on_tear_down_run, but that clashes with closing the debug proxy
+    def on_end_run(self, event):
+        if self.config['clear_cookies'] == 'post-run':
+            self.connection.delete_cookies(self.cookies)
+
+    def on_tear_down_step(self, event):
+        if self.config['clear_cookies'] == 'post-run':
+            self.cookies.extend(self.driver.get_cookies())
 
 
 class IOSRemoteDebugWebDriver(RemoteDebugWebDriver):

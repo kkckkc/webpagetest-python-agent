@@ -13,7 +13,7 @@ LOCK_DELAY = 0.1
 logger = logging.getLogger(__name__)
 
 
-class Provider:
+class Provider(object):
     def __init__(self, event_bus, config, lock_on=None):
         self.event_bus = event_bus
         self.event_bus.add(self)
