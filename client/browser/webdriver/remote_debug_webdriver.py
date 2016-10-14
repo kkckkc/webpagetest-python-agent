@@ -7,14 +7,15 @@ import thread
 
 import sys
 import urllib2
+from time import sleep
 
 import websocket
 from selenium.common.exceptions import NoSuchElementException
 
+from client.browser.ios_webkit_debug_proxy import IOSWebkitDebugProxy
 from client.browser.webdriver.webdriver import WebDriver
 from selenium.webdriver import Remote
 from argparse import ArgumentParser
-
 
 logger = logging.getLogger(__name__)
 
@@ -294,39 +295,42 @@ class RemoteDebugWebDriver(WebDriver):
         self.connection = RemoteDebugRemoteConnection(response[0][u'webSocketDebuggerUrl'])
         self.driver = Remote(command_executor=self.connection, desired_capabilities={})
 
-    def on_setup_run(self, event):
-        super(RemoteDebugWebDriver, self).on_setup_run(event)
-
+    def on_start_run(self, event):
+        super(RemoteDebugWebDriver, self).on_start_run(event)
         if self.config['clear_cookies'] == 'auto':
             self.config['clear_cookies'] = 'all' if self.connection.can_clear_cookies() else 'post-run'
-
         if self.config['clear_cache'] == 'auto':
             self.config['clear_cache'] = 'all' if self.connection.can_clear_cache() else 'disable-cache'
-
         if self.config['clear_cookies'] == 'all':
             self.driver.delete_all_cookies()
         if self.config['clear_cache'] == 'all':
             self.connection.clear_cache()
 
-    def on_setup_view(self, event):
-        super(RemoteDebugWebDriver, self).on_setup_view(event)
+    def on_start_view(self, event):
+        super(RemoteDebugWebDriver, self).on_start_view(event)
         if self.config['clear_cache'] == 'disable-cache':
             if event.view.is_first:
                 self.connection.disable_cache()
             else:
                 self.connection.enable_cache()
 
-    # TODO: This should really be on_tear_down_run, but that clashes with closing the debug proxy
-    def on_end_run(self, event):
+    def _screen_characteristics(self, event):
+        pass
+
+    def on_stop_run(self, event):
         if self.config['clear_cookies'] == 'post-run':
             self.connection.delete_cookies(self.cookies)
+        super(RemoteDebugWebDriver, self).on_stop_run(event)
 
-    def on_tear_down_step(self, event):
+    def on_stop_step(self, event):
         if self.config['clear_cookies'] == 'post-run':
             self.cookies.extend(self.driver.get_cookies())
+        super(RemoteDebugWebDriver, self).on_stop_step(event)
 
 
 class IOSRemoteDebugWebDriver(RemoteDebugWebDriver):
     def _hide_orange_overlay(self):
         self.driver.execute_script(
             "document.getElementById('webpagetest_orange_overlay').style.backgroundColor = 'rgb(255, 255, 255)';")
+
+

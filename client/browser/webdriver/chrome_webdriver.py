@@ -10,7 +10,7 @@ from selenium import webdriver
 from client.browser.webdriver.webdriver import WebDriver
 from client.capability import TraceCapability
 from client.process import run
-from client.provider import Provider
+from client.provider import Provider, PostProcessingProvider
 from argparse import ArgumentParser, SUPPRESS
 
 LOG_COMPLETION_WAIT = 0.5
@@ -45,7 +45,7 @@ class ChromeWebDriver(WebDriver):
             "traceCategories": join(DEFAULT_TRACE_CATEGORIES, ",")})
         self.driver = webdriver.Chrome(executable_path=self.config['chromedriver_path'], chrome_options=opts)
 
-    def on_tear_down_step(self, event):
+    def on_stop_step(self, event):
         sleep(LOG_COMPLETION_WAIT)
 
         trace_capability = TraceCapability(self.session)
@@ -57,6 +57,8 @@ class ChromeWebDriver(WebDriver):
             ))
             f.write("\n]")
 
+        super(ChromeWebDriver, self).on_stop_step(event)
+
     def _focus_window(self):
         window_handle = self.driver.current_window_handle
         self.driver.execute_async_script("alert('Focus');")
@@ -64,11 +66,11 @@ class ChromeWebDriver(WebDriver):
         self.driver.switch_to.window(window_handle)
 
 
-class ChromeTraceParser(Provider):
+class ChromeTraceParser(PostProcessingProvider):
     def __init__(self, event_bus, config):
         Provider.__init__(self, event_bus, config, lock_on="run")
 
-    def on_tear_down_run(self, event):
+    def on_stop_run(self, event):
         trace_capability = TraceCapability(self.session)
 
         i = 1
@@ -85,3 +87,5 @@ class ChromeTraceParser(Provider):
                 "-f", os.path.join(self.session.result_dir.folder, trace_capability.get_feature_usage_file(f))
             ])
             i += 1
+
+        super(ChromeTraceParser, self).on_stop_run(event)

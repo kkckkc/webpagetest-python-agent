@@ -3,7 +3,6 @@ import logging
 import os
 import subprocess
 import threading
-from time import sleep
 
 logger = logging.getLogger(__name__)
 

@@ -10,14 +10,13 @@ import logging
 import sys
 from collections import OrderedDict
 
-from client import event
 from client import model
 from client.browser.ios_webkit_debug_proxy import IOSWebkitDebugProxy
 from client.browser.webdriver.chrome_webdriver import ChromeWebDriver, ChromeTraceParser
 from client.browser.webdriver.remote_debug_webdriver import RemoteDebugWebDriver, IOSRemoteDebugWebDriver
 from client.browser.webdriver.webdriver import FirefoxWebDriver
-from client.event import EventDispatcher
 from client.log import init_log
+from client.provider import start_session, EventDispatcher
 from client.video.ffmpeg_video_capture import FfmpegVideoCapture
 from client.video.visualmetrics import VisualMetrics
 from client.logging_provider import LoggingProvider
@@ -99,6 +98,6 @@ else:
         logger.debug("Initializing provider %s with %r" % (k, config))
         provider = matching_provider_class(event_dispatcher, config)
 
-    event.run(event_dispatcher, model.Session(run_count=options.runs,
-                                              result_dir=model.ResultDirectory(options.dir),
-                                              script=get_script(options)))
+    start_session(event_dispatcher, model.Session(run_count=options.runs,
+                                                  result_dir=model.ResultDirectory(options.dir),
+                                                  script=get_script(options)))

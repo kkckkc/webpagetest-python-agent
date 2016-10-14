@@ -4,18 +4,18 @@ import re
 import shutil
 import sys
 
-from client.provider import Provider
+from client.provider import Provider, PostProcessingProvider
 from client.capability import VideoCapability
 from client import process
 
 logger = logging.getLogger(__name__)
 
 
-class VisualMetrics(Provider):
+class VisualMetrics(PostProcessingProvider):
     def __init__(self, event_bus, config):
         Provider.__init__(self, event_bus, config)
 
-    def on_tear_down_session(self, event):
+    def on_stop_session(self, event):
         video_capability = VideoCapability(self.session)
 
         self.lock()
@@ -26,6 +26,7 @@ class VisualMetrics(Provider):
             self.process_videos(video_capability)
         finally:
             self.unlock()
+        super(VisualMetrics, self).on_stop_session(event)
 
     def process_videos(self, video_capability):
         i = 1
@@ -71,9 +72,12 @@ class VisualMetrics(Provider):
             # Rebuild videos
             video_dir = os.path.join(self.session.result_dir.folder, "video")
             for f in get_folders(video_dir):
+                images = get_images(f)
+                if len(images) == 0:
+                    break
+
                 logger.info("Joining video %s" % (os.path.basename(f)))
 
-                images = get_images(f)
                 images.sort()
                 images.reverse()
 

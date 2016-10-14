@@ -1,20 +1,21 @@
 import logging
 from time import sleep
 
-from client.provider import Provider
+from client.provider import Provider, VideoRecordingProvider
 from client.capability import VideoCapability
 from client.process import launch
 
 logger = logging.getLogger(__name__)
 
 
-class FfmpegVideoCapture(Provider):
+class FfmpegVideoCapture(VideoRecordingProvider):
     def __init__(self, event_bus, config):
         Provider.__init__(self, event_bus, config, lock_on="step")
         self.pixel_density = config['pixelDensity'] if "pixelDensity" in config else None
         self.video_process = None
 
-    def on_setup_step(self, event):
+    def on_start_step(self, event):
+        super(FfmpegVideoCapture, self).on_start_step(event)
         video_capability = VideoCapability(self.session)
 
         pixel_density = self.pixel_density if self.pixel_density else self.view.pixel_density
@@ -50,13 +51,15 @@ class FfmpegVideoCapture(Provider):
             sleep(interval)
             counter -= 1
 
-    def on_end_step(self, event):
+    def on_stop_step(self, event):
         logger.info("Ending screen recording")
         if self.video_process:
             self.video_process.terminate()
         else:
             logger.debug("No active screen recording to end")
+        super(FfmpegVideoCapture, self).on_stop_step(event)
 
     def on_abort(self, event):
         logger.info("Aborting screen recording")
-        self.on_end_step(event)
+        self.on_stop_step(event)
+        super(FfmpegVideoCapture, self).on_abort(event)

@@ -7,7 +7,6 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
-import client.event
 import client.model
 import client.provider
 
@@ -101,7 +100,7 @@ class ClickAndWaitCommand(object):
         sleep(DEFAULT_ACTIVITY_TIMEOUT / 1000)
 
 
-class WebDriver(client.provider.Provider):
+class WebDriver(client.provider.BrowserProvider):
     def __init__(self, event_bus, config):
         client.provider.Provider.__init__(self, event_bus, config, lock_on="run")
         self.driver = None
@@ -109,31 +108,34 @@ class WebDriver(client.provider.Provider):
     def _init_driver(self):
         pass
 
-    def on_setup_run(self, event):
+    def on_start_run(self, event):
+        super(WebDriver, self).on_start_run(event)
         self._init_driver()
         self._focus_window()
 
-    def on_tear_down_run(self, event):
+    def on_stop_run(self, event):
         self.driver.quit()
+        super(WebDriver, self).on_stop_run(event)
 
     def on_abort(self, event):
         self.driver.quit()
-
-    def on_setup_view(self, event):
-        self.driver.set_window_size(*DEFAULT_VIEWPORT)
-
-        window_size = self.driver.get_window_size()
-        event.view.window_size = dimension(window_size[u'width'], window_size[u'height'])
-
-        p = self.driver.get_window_position()
-        event.view.window_position = position(p[u'x'], p[u'y'])
-
-        event.view.pixel_density = self.driver.execute_script("return window.devicePixelRatio;")
+        super(WebDriver, self).on_abort(event)
 
     def on_start_view(self, event):
+        super(WebDriver, self).on_start_view(event)
+        self._show_orange_overlay()
+        self._screen_characteristics(event)
         if self.session.url:
             self.session.script = "navigate %s" % self.session.url
         self._evaluate_script(self.session.script)
+
+    def _screen_characteristics(self, event):
+        self.driver.set_window_size(*DEFAULT_VIEWPORT)
+        window_size = self.driver.get_window_size()
+        event.view.window_size = dimension(window_size[u'width'], window_size[u'height'])
+        p = self.driver.get_window_position()
+        event.view.window_position = position(p[u'x'], p[u'y'])
+        event.view.pixel_density = self.driver.execute_script("return window.devicePixelRatio;")
 
     def _evaluate_script(self, script):
         step = client.model.Step(1, None)
@@ -141,21 +143,22 @@ class WebDriver(client.provider.Provider):
             logger.debug("evaluate_script - parsing command '%s'" % line)
             command = parse_command(line, step)
             if command.is_step:
-                self._show_orange_overlay()
+                self.event_bus.emit(client.provider.Event("StartStep", step=step, command=command))
 
-                self.event_bus.emit(client.event.SetupStepEvent(step))
-                self.event_bus.emit(client.event.StartStepEvent(step))
-
-                self._hide_orange_overlay()
-
-                command.execute(self.driver)
-
-                self.event_bus.emit(client.event.EndStepEvent(step))
-                self.event_bus.emit(client.event.TearDownStepEvent(step))
+                self.event_bus.emit(client.provider.Event("StopStep", step=step))
 
                 step = client.model.Step(step.index + 1, None)
             else:
                 command.execute(self.driver)
+
+    def on_stop_step(self, event):
+        super(WebDriver, self).on_stop_step(event)
+        self._show_orange_overlay()
+
+    def on_start_step(self, event):
+        super(WebDriver, self).on_start_step(event)
+        self._hide_orange_overlay()
+        event.command.execute(self.driver)
 
     def _focus_window(self):
         pass
@@ -204,7 +207,7 @@ class FirefoxWebDriver(WebDriver):
                                         firefox_binary=binary,
                                         executable_path=self.config['gecko_driver'])
 
-    def on_setup_view(self, event):
+    def _screen_characteristics(self, event):
         self.driver.set_window_size(1024, 768)
 
         window_size = self.driver.get_window_size()

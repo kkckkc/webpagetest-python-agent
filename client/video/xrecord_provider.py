@@ -1,7 +1,7 @@
 import logging
 from time import sleep
 
-from client.provider import Provider
+from client.provider import Provider, VideoRecordingProvider
 from client.capability import VideoCapability
 from client.process import launch
 from argparse import ArgumentParser
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 XRECORD_WAIT_BEFORE_START = 1
 
 
-class XRecordVideoCapture(Provider):
+class XRecordVideoCapture(VideoRecordingProvider):
     def __init__(self, event_bus, config):
         Provider.__init__(self, event_bus, config, lock_on="run")
         self.video_process = None
@@ -23,7 +23,9 @@ class XRecordVideoCapture(Provider):
         p.add_argument('--name', dest='device_name', required=True)
         return p
 
-    def on_setup_run(self, event):
+    # Needs to start at initialize phase, as it needs to run prior to ios_webkit_debug_proxy
+    def on_start_run(self, event):
+        super(XRecordVideoCapture, self).on_start_run(event)
         video_capability = VideoCapability(self.session)
 
         logger.info("Starting screen recording")
@@ -51,14 +53,15 @@ class XRecordVideoCapture(Provider):
         # Wait some additional time as recording doesn't start immediately
         sleep(XRECORD_WAIT_BEFORE_START)
 
-    def on_tear_down_run(self, event):
+    def on_stop_run(self, event):
         logger.info("Ending screen recording")
         if self.video_process:
             self.video_process.terminate()
             sleep(2)
         else:
             logger.debug("No active screen recording to end")
+        super(XRecordVideoCapture, self).on_stop_run(event)
 
     def on_abort(self, event):
         logger.info("Aborting screen recording")
-        self.on_tear_down_run(event)
+        self.on_stop_run(event)
